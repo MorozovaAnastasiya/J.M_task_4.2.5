@@ -1,54 +1,72 @@
 const searchInput = document.querySelector('.search-input');
-const outputField = document.querySelector('.output-field');
-
-searchInput.addEventListener('keyup', debounce(searchRepositories, 300));
+const searchOutput = document.querySelector('.search-output');
+const infoReposOutput = document.querySelector('.infoRepos-output');
+let arrReposInfo = {};
 
 async function searchRepositories() {
   if (!searchInput.value) {
-    outputField.textContent = '';
+    searchOutput.textContent = '';
   }
+  arrReposInfo = {};
   let response = await fetch(
     `https://api.github.com/search/repositories?q=${searchInput.value}`
   );
   if (response.ok) {
     response = await response.json();
-    outputField.textContent = '';
+    searchOutput.textContent = '';
     for (let i = 0; i < 5; i++) {
-      await createRepository(response.items[i]);
+      await createLinksToRepos(response.items[i]);
     }
   }
-  const allRepo = document.querySelectorAll('.repoLink');
-  for (repo of allRepo) {
-    repo.addEventListener('click', function () {
-      this.nextElementSibling.classList.remove('hidden');
+
+  const allRepoLinks = document.querySelectorAll('.search-output__link');
+  for (link of allRepoLinks) {
+    link.addEventListener('click', function () {
+      createCardInfoRepo(link);
+      searchOutput.textContent = '';
       searchInput.value = '';
-      allRepo.forEach((elem) => {
-        elem.classList.add('hidden');
-      });
+      infoReposOutput.classList.remove('hidden');
+      closeCard();
     });
   }
-
-  const allCloseButton = document.querySelectorAll('.button-close');
+}
+function closeCard() {
+  const allCloseButton = document.querySelectorAll('.card__button-close');
+  console.log(allCloseButton);
   for (button of allCloseButton) {
     button.addEventListener('click', function () {
-      this.parentElement.classList.add('hidden');
+      this.parentElement.remove();
     });
   }
 }
 
-function createRepository(repo) {
+function createLinksToRepos(repo) {
   const repoLink = document.createElement('a');
-  repoLink.classList.add('repoLink');
-  const repoInfo = document.createElement('div');
-  repoInfo.classList.add('repoInfo');
-  repoInfo.classList.add('hidden');
+  repoLink.classList.add('search-output__link');
   repoLink.textContent = `${repo.name}`;
-  outputField.append(repoLink);
-  outputField.append(repoInfo);
-  repoInfo.insertAdjacentHTML(
+  arrReposInfo[repo.name] = {
+    Name: repo.name,
+    Owner: repo.owner.login,
+    Stars: repo.stargazers_count,
+  };
+  searchOutput.append(repoLink);
+}
+
+function createCardInfoRepo(link) {
+  const nameRepo = link.textContent;
+  infoReposOutput.insertAdjacentHTML(
     'afterbegin',
-    `<div><p>Name: ${repo.name}</p> <p>Owner: ${repo.owner.login}</p> <p>Stars: ${repo.stargazers_count}</p></div>
-    <button class="button-close" type="button"><img class="close-img" src="close.png" ></button>`
+    `<div class="infoRepos-output__card">
+        <div class="card__text text">
+          <p class="text__elem">Name: ${arrReposInfo[nameRepo].Name}</p>
+          <p class="text__elem">Owner: ${arrReposInfo[nameRepo].Owner}</p>
+          <p class="text__elem">Stars: ${arrReposInfo[nameRepo].Stars}</p>
+        </div>
+        <button class="card__button-close button-close" type="button">
+          <img class="button-close__img" src="close.png" >
+        </button>
+    </div>
+    `
   );
 }
 
@@ -62,3 +80,5 @@ function debounce(fn, debounceTime) {
     timer = setTimeout(fnCall, debounceTime);
   };
 }
+
+searchInput.addEventListener('keydown', debounce(searchRepositories, 300));
